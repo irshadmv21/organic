@@ -1,0 +1,87 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Banners extends CI_Controller {
+
+	
+	
+	public function __construct() {
+		parent::__construct();
+		if(!$this->session->userdata('session_data')){
+			$this->session->set_userdata('error_msg', INVALID_AUTH);
+			header("Location: login");
+		}else{
+			$this->session->unset_userdata('error_msg');
+		}
+
+
+	}
+	public function index()
+	{
+		$data['base_path']=base_url().'uploads/banners/';
+		$data['result'] = $this->common->get_table('or_banners','id,name,thumb,status,date_added',[],'id','DESC');
+		$this->load->view('admin/banners/list',$data);
+	}
+	public function form(){
+
+		$banner_id = $this->uri->segment(3);
+		$data['headding'] = 'Add banner';
+		if($banner_id){
+			$data['banner']=$this->common->get_row('or_banners','*',['id'=>$banner_id]);
+			$data['headding'] = 'Edit banner';
+		}
+		$data['action']=base_url().'banners/save';
+		$data['base_path']=base_url().'uploads/banners/';
+		$this->load->view('admin/banners/form',$data);
+
+
+	}
+	public function save(){
+		if($this->input->post()){
+			 $post_data  = $this->input->post();
+			 $array_data = [
+			 	'name' 		=> $post_data['name'],
+			 	'status' 	=> $post_data['status'],
+			 ];
+
+			 if(isset($_FILES['image']['name'])){
+
+			 	$image_result = $this->common->upload_file('./uploads/banners/','image');
+			 	
+			 	if($image_result['status']=='success'){
+			 		$array_data['image'] = $image_result['file_name'];
+			 		$array_data['thumb'] = $image_result['thumb_name'];
+			 	}
+			 }
+			 if($this->input->post('id')){
+			 	$arr_where = ['id'=>$post_data['id']];
+			 	$insert_id = $this->common->update_Details($array_data,'or_banners',$arr_where);
+				$this->session->set_flashdata('success_msg','Successfully updated banner');
+			 	$json=['status'=>'success','message'=>'Successfully updated banner'];
+			 }else{
+			 	if(!isset($_FILES['image']['name'])){
+			 		$json = ['status'=>'error','message'=>'Please choose a image file'];
+			 		$this->session->set_flashdata('error_msg','Successfully updated banner');
+			 	}else{
+					$insert_id=$this->common->Insert_Data('or_banners',$array_data);
+					$this->session->set_flashdata('success_msg','Successfully inserted banner');
+					$json = ['status'=>'success','message'=>'Successfully inserted banner'];
+			 	}
+			 }
+		}else{
+			$this->session->set_flashdata('error_msg','Invalid Access !');
+			$json = ['status'=>'error','message'=>'Invalid Access !'];
+		}
+		echo json_encode($json);
+	}
+	public function delete(){
+		if(isset($_POST['id'])){
+			$arr_where=['id'=>$_POST['id']];
+			$this->common->Delete_data('or_banners',$arr_where);
+			$json = ['status'=>'success','message'=>'Successfully deleted data'];
+		}else{
+			$json = ['status'=>'error','message'=>'Something went wrong...!'];
+		}
+		echo json_encode($json);
+	}
+}
